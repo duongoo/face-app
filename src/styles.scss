@@ -1,1 +1,10 @@
 /* You can add global styles to this file, and also import other style files */
+
+:root {
+  --color-primary: #1976d2;
+  --color-valid: #388e3c;    /* Xanh lá (Hợp lệ) */
+  --color-invalid: #d32f2f;  /* Đỏ (Không hợp lệ) */
+  --color-detecting: #ffc107; /* Vàng (Đang dò...) */
+  --color-disabled: #a0a0a0;
+  --color-overlay-bg: rgba(0, 0, 0, 0.6); /* Nền mờ */
+}

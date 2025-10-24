@@ -7,8 +7,8 @@
   </div>
 
   <div class="video-container" [style.display]="currentMode === 'camera' ? 'block' : 'none'">
-    <video #videoElement autoplay playsinline [style.display]="loading || loaddingModels ? 'none' : 'block'"></video>
-    <canvas #canvasElement [style.display]="loading || loaddingModels ? 'block' : 'none'"></canvas>
+    <video #videoElement autoplay playsinline></video>
+    <canvas #canvasElement></canvas>
     @if (loading || loaddingModels) {
       <div class="loading-overlay">
         <div class="spinner"></div>
@@ -18,19 +18,23 @@
     <div class="face-detection-overlay" [class.face-valid]="faceValid" [class.face-invalid]="!faceValid && !loading && !loaddingModels" [class.face-detecting]="faceDetecting"></div>
   </div>
 
-  <div class="file-upload-container" [style.display]="currentMode === 'file' ? 'flex' : 'none'">
-    <input type="file" (change)="onFileSelected($event)" accept="image/*" [attr.multiple]="false">
-    <canvas #fileCanvasElement [style.display]="selectedFile && !loaddingModels ? 'block' : 'none'" style="width: 100%; height: auto;"></canvas>
-    @if (!selectedFile && !loaddingModels) {
-      <p class="placeholder-text">Chọn một file ảnh để xem trước</p>
-    }
-    @if (loading || loaddingModels) {
-      <div class="loading-overlay">
-        <div class="spinner"></div>
-        <p>Đang xử lý...</p>
-      </div>
-    }
-    <div class="face-detection-overlay" [class.face-valid]="faceValid" [class.face-invalid]="!faceValid && selectedFile && !loading && !loaddingModels" [class.face-detecting]="faceDetecting"></div>
+  <div class="file-upload-container" [style.display]="currentMode === 'file' ? 'flex' : 'none'"
+       (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
+       [class.drag-hover]="isDragging">
+    <input type="file" (change)="onFileSelected($event)" accept="image/*" [attr.multiple]="false" #fileInput style="display: none;">
+    <div class="file-upload-area" (click)="fileInput.click()">
+      <canvas #fileCanvasElement></canvas>
+      @if (!selectedFile && !loaddingModels) {
+        <p class="placeholder-text">Kéo thả ảnh vào đây hoặc click để chọn</p>
+      }
+      @if (loading || loaddingModels) {
+        <div class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Đang xử lý...</p>
+        </div>
+      }
+      <div class="face-detection-overlay" [class.face-valid]="faceValid" [class.face-invalid]="!faceValid && selectedFile && !loading && !loaddingModels" [class.face-detecting]="faceDetecting"></div>
+    </div>
   </div>
 
   <button (click)="currentMode === 'camera' ? handleCheckIn() : handleFileCheckIn()" [disabled]="loading || !faceValid">

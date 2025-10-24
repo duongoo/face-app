@@ -33,6 +33,9 @@ export class CheckInComponent {
   currentMode: 'camera' | 'file' = 'camera'; // 'camera' or 'file'
   selectedFile: File | null = null;
   private detectionInterval: any; // For camera face detection loop
+  isDragging: boolean = false; // New property for drag-and-drop styling
+
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>; // Reference to the hidden file input
 
   constructor(private cdr: ChangeDetectorRef) {}
 
@@ -144,13 +147,52 @@ export class CheckInComponent {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
-    ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // ctx?.drawImage(video, 0, 0, canvas.width, canvas.height); // Removed: Canvas should not draw video
 
-    const result = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+    const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
 
-    this.faceValid = !!result;
+    this.faceValid = !!detections;
     this.faceDetecting = false; // Detection finished
     this.cdr.detectChanges(); // Update UI for faceValid change
+
+    if (detections) {
+      const resizedDetections = faceapi.resizeResults(detections, { width: canvas.width, height: canvas.height });
+      // Draw default landmarks first
+      faceapi.draw.drawFaceLandmarks(canvas, resizedDetections.landmarks);
+
+      // Manually draw bolder lines over the default ones
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.strokeStyle = 'blue'; // Color for bolder lines
+        ctx.lineWidth = 4; // Bolder line width
+
+        const drawLandmarkLines = (points: faceapi.Point[]) => {
+          ctx.beginPath();
+          for (let i = 0; i < points.length; i++) {
+            const point = points[i];
+            if (i === 0) {
+              ctx.moveTo(point.x, point.y);
+            } else {
+              ctx.lineTo(point.x, point.y);
+            }
+          }
+          ctx.stroke();
+        };
+
+        // Draw jawline
+        drawLandmarkLines(resizedDetections.landmarks.getJawOutline());
+        // Draw eyebrows
+        drawLandmarkLines(resizedDetections.landmarks.getLeftEyeBrow());
+        drawLandmarkLines(resizedDetections.landmarks.getRightEyeBrow());
+        // Draw nose
+        drawLandmarkLines(resizedDetections.landmarks.getNose());
+        // Draw eyes
+        drawLandmarkLines(resizedDetections.landmarks.getLeftEye());
+        drawLandmarkLines(resizedDetections.landmarks.getRightEye());
+        // Draw mouth
+        drawLandmarkLines(resizedDetections.landmarks.getMouth());
+      }
+    }
   }
 
   async handleCheckIn() {
@@ -227,16 +269,55 @@ export class CheckInComponent {
                 canvas.width = img.width;
                 canvas.height = img.height;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // Removed: Canvas should not draw image
 
                 this.faceDetecting = true; // Indicate detection is in progress
                 this.cdr.detectChanges();
 
                 // Perform face detection on the uploaded image
-                const result = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions());
-                this.faceValid = !!result; // Set faceValid based on detection
+                const detections = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+                this.faceValid = !!detections; // Set faceValid based on detection
                 this.faceDetecting = false; // Detection finished
                 this.cdr.detectChanges(); // Update UI for faceValid change
+
+                if (detections) {
+                  const resizedDetections = faceapi.resizeResults(detections, { width: canvas.width, height: canvas.height });
+                  // Draw default landmarks first
+                  faceapi.draw.drawFaceLandmarks(canvas, resizedDetections.landmarks);
+
+                  // Manually draw bolder lines over the default ones
+                  const ctx = canvas.getContext('2d');
+                  if (ctx) {
+                    ctx.strokeStyle = 'blue'; // Color for bolder lines
+                    ctx.lineWidth = 4; // Bolder line width
+
+                    const drawLandmarkLines = (points: faceapi.Point[]) => {
+                      ctx.beginPath();
+                      for (let i = 0; i < points.length; i++) {
+                        const point = points[i];
+                        if (i === 0) {
+                          ctx.moveTo(point.x, point.y);
+                        } else {
+                          ctx.lineTo(point.x, point.y);
+                        }
+                      }
+                      ctx.stroke();
+                    };
+
+                    // Draw jawline
+                    drawLandmarkLines(resizedDetections.landmarks.getJawOutline());
+                    // Draw eyebrows
+                    drawLandmarkLines(resizedDetections.landmarks.getLeftEyeBrow());
+                    drawLandmarkLines(resizedDetections.landmarks.getRightEyeBrow());
+                    // Draw nose
+                    drawLandmarkLines(resizedDetections.landmarks.getNose());
+                    // Draw eyes
+                    drawLandmarkLines(resizedDetections.landmarks.getLeftEye());
+                    drawLandmarkLines(resizedDetections.landmarks.getRightEye());
+                    // Draw mouth
+                    drawLandmarkLines(resizedDetections.landmarks.getMouth());
+                  }
+                }
               }
             } else {
               console.error('fileCanvasElement.nativeElement is undefined after Promise.resolve().then()');
@@ -255,6 +336,29 @@ export class CheckInComponent {
       }
     }
     this.cdr.detectChanges();
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault(); // Prevent default to allow drop
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault(); // Prevent default action (open as link for some elements)
+    event.stopPropagation();
+    this.isDragging = false;
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.onFileSelected({ target: { files: files } } as unknown as Event);
+    }
   }
 
   async handleFileCheckIn() {
