@@ -1,3 +1,12 @@
+:root {
+  --color-primary: #1976d2;
+  --color-valid: #388e3c;    /* Xanh lá (Hợp lệ) */
+  --color-invalid: #d32f2f;  /* Đỏ (Không hợp lệ) */
+  --color-detecting: #ffc107; /* Vàng (Đang dò...) */
+  --color-disabled: #a0a0a0;
+  --color-overlay-bg: rgba(0, 0, 0, 0.6); /* Nền mờ */
+}
+
 .check-in-container {
   max-width: 400px;
   margin: 40px auto;
@@ -23,9 +32,9 @@
 }
 
 .mode-toggle button.active {
-  background: #1976d2;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #1976d2;
+  border-color: var(--color-primary);
 }
 
 button {
@@ -33,7 +42,7 @@ button {
   font-size: 16px;
   border-radius: 4px;
   border: none;
-  background: #1976d2;
+  background: var(--color-primary);
   color: #fff;
   cursor: pointer;
   margin-top: 16px;
@@ -44,15 +53,18 @@ button:hover {
 }
 
 button:disabled {
-  background: #a0a0a0;
+  background: var(--color-disabled);
   cursor: not-allowed;
 }
 
 .result {
   margin-top: 24px;
   font-size: 18px;
-  color: #388e3c;
+  color: var(--color-valid);
 }
+
+/* Mấy cái class từ .video-container đến .placeholder-text 
+   mày giữ nguyên, tao copy lại đây cho đủ bộ */
 
 .spinner {
   border: 4px solid rgba(255, 255, 255, 0.3);
@@ -65,33 +77,26 @@ button:disabled {
   vertical-align: middle;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 .video-container {
   position: relative;
   width: 100%;
-  max-width: 100%; /* Ensure it doesn't overflow its parent */
-  height: auto; /* Maintain aspect ratio */
+  max-width: 100%;
+  height: auto;
   margin-top: 16px;
   border: 1px solid #ccc;
   border-radius: 8px;
-  overflow: hidden; /* Hide parts of video/canvas that might overflow */
+  overflow: hidden;
 }
 
 .video-container video,
 .video-container canvas {
   width: 100%;
   height: auto;
-  display: block; /* Remove extra space below inline elements */
+  display: block;
 }
 
 .file-upload-container {
   position: relative;
-  // width: 100%;
-  // max-width: 100%;
   height: auto;
   margin-top: 16px;
   border: 1px solid #ccc;
@@ -102,7 +107,9 @@ button:disabled {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 200px; /* Ensure it has some height */
+  min-height: 200px;
+  /* Giữ tỷ lệ 4:3 cho đẹp */
+  aspect-ratio: 4 / 3;
 }
 
 .file-upload-container input[type="file"] {
@@ -117,6 +124,9 @@ button:disabled {
 .file-upload-container canvas {
   margin-top: 10px;
   border: 1px dashed #ccc;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .loading-overlay {
@@ -145,90 +155,66 @@ button:disabled {
   margin: 20px;
 }
 
+/* ========================================================= */
+/* === BỎ HẾT CSS CŨ CỦA MÀY, THAY BẰNG CÁI NÀY === */
+/* ========================================================= */
+
 .face-detection-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
-  pointer-events: none;
+  pointer-events: none; /* Cho phép click xuyên qua */
   z-index: 5;
-  transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
-
-  /* Create the oval cutout */
-  mask-image: radial-gradient(ellipse 40% 45% at 50% 50%, transparent 60%, black 60%);
-  -webkit-mask-image: radial-gradient(ellipse 40% 45% at 50% 50%, transparent 60%, black 60%);
-
-  /* Base border for the oval */
-  border: 3px solid transparent;
-  box-sizing: border-box;
-  border-radius: 50% / 60%; /* Match ellipse shape for the border */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  height: 90%;
+  
+  /* * Tụi mình sẽ KHÔNG set background ở đây.
+   * Cái ::after sẽ đảm nhiệm luôn lớp phủ.
+   */
 }
 
-.face-detection-overlay::before,
+/* Dùng ::after để TẠO CẢ VÒNG TRÒN VÀ LỚP PHỦ "ĐỤC LỖ" */
 .face-detection-overlay::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit; /* Inherit ellipse shape */
-  box-sizing: border-box;
-  border: 3px solid transparent;
-  z-index: 6; /* Above the main overlay */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  /* Kích thước của cái vòng tròn/oval */
+  /* Mày muốn hình tròn thì để 2 số bằng nhau, ví dụ: 220px */
+  width: 220px;  /* 80% của 300px (chiều rộng thẻ) */
+  height: 250px; /* Cho nó hơi oval một xíu cho giống mặt người */
+  border-radius: 50%; /* 50% là tròn, mày có thể dùng 45% / 50% để ra oval */
+
+  /* * ĐÂY LÀ TRICK "ĐỤC LỖ"
+   * 1. border: 4px solid ... -> Đây là cái viền.
+   * 2. box-shadow: ... -> Đây là cái bóng SIÊU TO, đóng vai trò lớp phủ.
+   */
+   
+  box-sizing: border-box; /* Quan trọng, để border không làm tăng size */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+  /* State mặc định (face-detecting) */
+  border: 4px solid var(--color-detecting);
+  box-shadow: 0 0 0 9999px var(--color-overlay-bg);
 }
 
-.face-detection-overlay.face-detecting {
-  border-color: #d32f2f; /* Red border when detecting but no face found */
-}
-
-.face-detection-overlay.face-detecting::before {
-  border-top-color: #d32f2f;
-  border-left-color: #d32f2f;
-  animation: rotateHalfCircle1 1.5s linear infinite;
-}
-
-.face-detection-overlay.face-detecting::after {
-  border-bottom-color: #d32f2f;
-  border-right-color: #d32f2f;
-  animation: rotateHalfCircle2 1.5s linear infinite;
-}
-
-.face-detection-overlay.face-valid {
-  background: rgba(0, 0, 0, 0.3); /* Lighter overlay when valid */
-  border-color: #388e3c; /* Green border when valid */
-}
-
-.face-detection-overlay.face-valid::before,
+/* KHI TÌM THẤY MẶT HỢP LỆ */
 .face-detection-overlay.face-valid::after {
-  border-color: transparent; /* Hide rotating borders when valid */
-  animation: none;
+  border-color: var(--color-valid);
+  /* Lớp phủ mờ đi một chút (tùy mày) */
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4); 
 }
 
-.face-detection-overlay.face-invalid {
-  background: rgba(0, 0, 0, 0.7); /* Darker overlay when invalid */
-  border-color: #d32f2f; /* Red border when invalid */
-}
-
-.face-detection-overlay.face-invalid::before,
+/* KHI MẶT KHÔNG HỢP LỆ (hoặc không tìm thấy) */
 .face-detection-overlay.face-invalid::after {
-  border-color: transparent; /* Hide rotating borders when invalid */
-  animation: none;
+  border-color: var(--color-invalid);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); /* Đậm hơn */
 }
 
-@keyframes rotateHalfCircle1 {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-@keyframes rotateHalfCircle2 {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(-360deg); }
+/* XÓA HẾT MẤY CÁI @keyframes cũ đi, nó không cần nữa */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
