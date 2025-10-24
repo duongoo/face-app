@@ -1,0 +1,45 @@
+<div class="check-in-container">
+  <h2>Check-in khuôn mặt</h2>
+
+  <div class="mode-toggle">
+    <button (click)="toggleMode('camera')" [class.active]="currentMode === 'camera'">Camera</button>
+    <button (click)="toggleMode('file')" [class.active]="currentMode === 'file'">Upload File</button>
+  </div>
+
+  <div class="video-container" [style.display]="currentMode === 'camera' ? 'block' : 'none'">
+    <video #videoElement autoplay playsinline [style.display]="loading || loaddingModels ? 'none' : 'block'"></video>
+    <canvas #canvasElement [style.display]="loading || loaddingModels ? 'block' : 'none'"></canvas>
+    @if (loading || loaddingModels) {
+      <div class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Đang xử lý...</p>
+      </div>
+    }
+    <div class="face-detection-overlay" [class.face-valid]="faceValid" [class.face-invalid]="!faceValid && !loading && !loaddingModels" [class.face-detecting]="faceDetecting"></div>
+  </div>
+
+  <div class="file-upload-container" [style.display]="currentMode === 'file' ? 'flex' : 'none'">
+    <input type="file" (change)="onFileSelected($event)" accept="image/*" [attr.multiple]="false">
+    <canvas #fileCanvasElement [style.display]="selectedFile && !loaddingModels ? 'block' : 'none'" style="width: 100%; height: auto;"></canvas>
+    @if (!selectedFile && !loaddingModels) {
+      <p class="placeholder-text">Chọn một file ảnh để xem trước</p>
+    }
+    @if (loading || loaddingModels) {
+      <div class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Đang xử lý...</p>
+      </div>
+    }
+    <div class="face-detection-overlay" [class.face-valid]="faceValid" [class.face-invalid]="!faceValid && selectedFile && !loading && !loaddingModels" [class.face-detecting]="faceDetecting"></div>
+  </div>
+
+  <button (click)="currentMode === 'camera' ? handleCheckIn() : handleFileCheckIn()" [disabled]="loading || !faceValid">
+    {{ currentMode === 'camera' ? 'Check-in từ Camera' : 'Check-in từ File' }}
+  </button>
+
+@if (checkInResult) {
+  <div class="result">
+    {{ checkInResult }}
+  </div>
+}
+</div>

@@ -1,0 +1,25 @@
+<div class="check-in-container">
+  <h2>
+    <span class="icon-face">&#128064;</span>
+    Check-in khuôn mặt
+  </h2>
+  <div class="camera-wrapper">
+    <div class="circle-frame" [class.valid]="faceValid" [class.invalid]="!faceValid">
+      <video #videoElement autoplay muted playsinline></video>
+      <canvas #canvasElement></canvas>
+      <div *ngIf="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <span>Đang xử lý...</span>
+      </div>
+    </div>
+  </div>
+  <button class="checkin-btn" (click)="handleCheckIn()" [disabled]="loading">
+    <span class="icon-camera">&#128247;</span>
+    Check-in ngay
+  </button>
+  <div class="result" *ngIf="checkInResult">
+    <span [class.success]="checkInResult.includes('thành công')" [class.error]="!checkInResult.includes('thành công')">
+      {{ checkInResult }}
+    </span>
+  </div>
+</div>
