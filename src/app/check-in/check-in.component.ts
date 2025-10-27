@@ -68,6 +68,7 @@ export class CheckInComponent {
       }
       this.startFaceDetectionLoop(); // Start detection loop for camera
     } else {
+      this.selectedFile = null; // Clear selected file when switching to file mode
       this.stopCamera();
       this.stopFaceDetectionLoop(); // Stop detection loop for file mode
       if (this.canvasElement) { // Add null check for canvasElement
@@ -203,8 +204,8 @@ export class CheckInComponent {
     }
 
     this.loading = true;
-    this.faceValid = false; // Reset face detection status during check-in
-    this.faceDetecting = false; // Reset detection in progress status
+    // this.faceValid = false; // Reset face detection status during check-in
+    // this.faceDetecting = false; // Reset detection in progress status
     this.stopFaceDetectionLoop(); // Stop detection during check-in
     const video = this.videoElement.nativeElement;
     const canvas = this.canvasElement.nativeElement;
@@ -255,78 +256,87 @@ export class CheckInComponent {
     if (input.files && input.files.length > 0) {
       this.selectedFile = input.files[0];
       this.cdr.detectChanges(); // Force change detection to render the canvas
-
+      this.loaddingModels = true;
+      this.checkInResult = ''; // Clear previous result
+      this.cdr.detectChanges(); // Trigger UI update for loading state
       const reader = new FileReader();
-      reader.onload = (e: any) => {
-        const img = new Image();
-        img.onload = () => {
-          // Use Promise.resolve().then() to ensure the canvas element is rendered and ViewChild is resolved
-          Promise.resolve().then(async () => {
-            if (this.fileCanvasElement && this.fileCanvasElement.nativeElement) {
-              const canvas = this.fileCanvasElement.nativeElement;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // Removed: Canvas should not draw image
+      try {
+        reader.onload = (e: any) => {
+          const img = new Image();
+          img.onload = () => {
+            // Use Promise.resolve().then() to ensure the canvas element is rendered and ViewChild is resolved
+            Promise.resolve().then(async () => {
+              if (this.fileCanvasElement && this.fileCanvasElement.nativeElement) {
+                const canvas = this.fileCanvasElement.nativeElement;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // Removed: Canvas should not draw image
 
-                this.faceDetecting = true; // Indicate detection is in progress
-                this.cdr.detectChanges();
+                  this.faceDetecting = true; // Indicate detection is in progress
+                  this.cdr.detectChanges();
 
-                // Perform face detection on the uploaded image
-                const detections = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-                this.faceValid = !!detections; // Set faceValid based on detection
-                this.faceDetecting = false; // Detection finished
-                this.cdr.detectChanges(); // Update UI for faceValid change
+                  // Perform face detection on the uploaded image
+                  const detections = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+                  this.faceValid = !!detections; // Set faceValid based on detection
+                  this.faceDetecting = false; // Detection finished
+                  this.cdr.detectChanges(); // Update UI for faceValid change
 
-                if (detections) {
-                  const resizedDetections = faceapi.resizeResults(detections, { width: canvas.width, height: canvas.height });
-                  // Draw default landmarks first
-                  faceapi.draw.drawFaceLandmarks(canvas, resizedDetections.landmarks);
+                  if (detections) {
+                    const resizedDetections = faceapi.resizeResults(detections, { width: canvas.width, height: canvas.height });
+                    // Draw default landmarks first
+                    faceapi.draw.drawFaceLandmarks(canvas, resizedDetections.landmarks);
 
-                  // Manually draw bolder lines over the default ones
-                  const ctx = canvas.getContext('2d');
-                  if (ctx) {
-                    ctx.strokeStyle = 'blue'; // Color for bolder lines
-                    ctx.lineWidth = 4; // Bolder line width
+                    // Manually draw bolder lines over the default ones
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                      ctx.strokeStyle = 'blue'; // Color for bolder lines
+                      ctx.lineWidth = 4; // Bolder line width
 
-                    const drawLandmarkLines = (points: faceapi.Point[]) => {
-                      ctx.beginPath();
-                      for (let i = 0; i < points.length; i++) {
-                        const point = points[i];
-                        if (i === 0) {
-                          ctx.moveTo(point.x, point.y);
-                        } else {
-                          ctx.lineTo(point.x, point.y);
+                      const drawLandmarkLines = (points: faceapi.Point[]) => {
+                        ctx.beginPath();
+                        for (let i = 0; i < points.length; i++) {
+                          const point = points[i];
+                          if (i === 0) {
+                            ctx.moveTo(point.x, point.y);
+                          } else {
+                            ctx.lineTo(point.x, point.y);
+                          }
                         }
-                      }
-                      ctx.stroke();
-                    };
+                        ctx.stroke();
+                      };
 
-                    // Draw jawline
-                    drawLandmarkLines(resizedDetections.landmarks.getJawOutline());
-                    // Draw eyebrows
-                    drawLandmarkLines(resizedDetections.landmarks.getLeftEyeBrow());
-                    drawLandmarkLines(resizedDetections.landmarks.getRightEyeBrow());
-                    // Draw nose
-                    drawLandmarkLines(resizedDetections.landmarks.getNose());
-                    // Draw eyes
-                    drawLandmarkLines(resizedDetections.landmarks.getLeftEye());
-                    drawLandmarkLines(resizedDetections.landmarks.getRightEye());
-                    // Draw mouth
-                    drawLandmarkLines(resizedDetections.landmarks.getMouth());
+                      // Draw jawline
+                      drawLandmarkLines(resizedDetections.landmarks.getJawOutline());
+                      // Draw eyebrows
+                      drawLandmarkLines(resizedDetections.landmarks.getLeftEyeBrow());
+                      drawLandmarkLines(resizedDetections.landmarks.getRightEyeBrow());
+                      // Draw nose
+                      drawLandmarkLines(resizedDetections.landmarks.getNose());
+                      // Draw eyes
+                      drawLandmarkLines(resizedDetections.landmarks.getLeftEye());
+                      drawLandmarkLines(resizedDetections.landmarks.getRightEye());
+                      // Draw mouth
+                      drawLandmarkLines(resizedDetections.landmarks.getMouth());
+                    }
                   }
                 }
+              } else {
+                console.error('fileCanvasElement.nativeElement is undefined after Promise.resolve().then()');
               }
-            } else {
-              console.error('fileCanvasElement.nativeElement is undefined after Promise.resolve().then()');
-            }
-          });
+              this.loaddingModels = false;
+              this.cdr.detectChanges(); // Trigger UI update when loading is complete
+            });
+          };
+          img.src = e.target.result;
         };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(this.selectedFile);
+        reader.readAsDataURL(this.selectedFile);
+      } catch (error) {
+        this.loaddingModels = false;
+        this.cdr.detectChanges(); // Trigger UI update on error
+      }
     } else {
       this.selectedFile = null;
       this.faceValid = false; // Reset faceValid if no file selected
@@ -370,8 +380,8 @@ export class CheckInComponent {
 
     this.loading = true;
     this.checkInResult = ''; // Clear previous result
-    this.faceValid = false; // Reset face detection status during check-in
-    this.faceDetecting = false; // Reset detection in progress status
+    // this.faceValid = false; // Reset face detection status during check-in
+    // this.faceDetecting = false; // Reset detection in progress status
 
     try {
       const formData = new FormData();
