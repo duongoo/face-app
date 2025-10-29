@@ -1,11 +1,12 @@
 import { Component, ElementRef, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import * as faceapi from 'face-api.js';
 
 @Component({
   standalone: true,
   selector: 'app-check-in',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './check-in.component.html',
   styleUrls: ['./check-in.component.scss']
 })
@@ -35,9 +36,119 @@ export class CheckInComponent {
   private detectionInterval: any; // For camera face detection loop
   isDragging: boolean = false; // New property for drag-and-drop styling
 
+  registrationName: string = '';
+  registrationCode: string = '';
+  registrationFile: File | null = null;
+  registrationLoading: boolean = false;
+  registrationResult: string = '';
+  registrationStatus: 'idle' | 'success' | 'error' | 'info' = 'idle';
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>; // Reference to the hidden file input
+  @ViewChild('registrationFileInput') registrationFileInput!: ElementRef<HTMLInputElement>;
 
   constructor(private cdr: ChangeDetectorRef) {}
+
+  get isRegistrationDisabled(): boolean {
+    return (
+      this.registrationLoading ||
+      !this.registrationName.trim() ||
+      !this.registrationCode.trim() ||
+      !this.registrationFile
+    );
+  }
+
+  triggerRegistrationFilePicker(): void {
+    this.registrationFileInput?.nativeElement?.click();
+  }
+
+  onRegistrationFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files.length > 0 ? input.files[0] : null;
+
+    this.registrationFile = file;
+    this.registrationResult = '';
+    this.registrationStatus = 'idle';
+    this.cdr.detectChanges();
+  }
+
+  clearRegistrationFile(options: { detectChanges?: boolean; resetStatus?: boolean } = {}): void {
+    const { detectChanges = true, resetStatus = true } = options;
+    this.registrationFile = null;
+    if (this.registrationFileInput) {
+      this.registrationFileInput.nativeElement.value = '';
+    }
+    if (resetStatus) {
+      this.registrationStatus = 'idle';
+      this.registrationResult = '';
+    }
+    if (detectChanges) {
+      this.cdr.detectChanges();
+    }
+  }
+
+  async handleRegistrationSubmit(event?: Event): Promise<void> {
+    event?.preventDefault();
+
+    const trimmedName = this.registrationName.trim();
+    const trimmedCode = this.registrationCode.trim();
+
+    if (!trimmedName || !trimmedCode) {
+      this.registrationStatus = 'error';
+      this.registrationResult = 'Vui lòng nhập đầy đủ họ tên và mã khách hàng.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    if (!this.registrationFile) {
+      this.registrationStatus = 'error';
+      this.registrationResult = 'Vui lòng chọn ảnh khuôn mặt để đăng ký.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.registrationLoading = true;
+    this.registrationStatus = 'info';
+    this.registrationResult = 'Đang đăng ký khách hàng...';
+    this.cdr.detectChanges();
+
+    try {
+      const formData = new FormData();
+      formData.append('name', trimmedName);
+      formData.append('code', trimmedCode);
+      formData.append('imageFile', this.registrationFile, this.registrationFile.name);
+
+      const response = await fetch('http://localhost:3000/register', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          this.registrationStatus = 'success';
+          this.registrationResult = result.message || 'Đăng ký khách hàng thành công!';
+          this.registrationName = '';
+          this.registrationCode = '';
+          this.clearRegistrationFile({ detectChanges: false, resetStatus: false });
+        } else {
+          this.registrationStatus = 'error';
+          this.registrationResult = result.message || 'Đăng ký khách hàng thất bại!';
+        }
+      } else if (response.status === 400) {
+        const errorResult = await response.json();
+        this.registrationStatus = 'error';
+        this.registrationResult = errorResult.message || 'Yêu cầu đăng ký không hợp lệ!';
+      } else {
+        this.registrationStatus = 'error';
+        this.registrationResult = `Lỗi API: ${response.status} ${response.statusText}`;
+      }
+    } catch (error) {
+      this.registrationStatus = 'error';
+      this.registrationResult = 'Lỗi kết nối API đăng ký!';
+    } finally {
+      this.registrationLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
 
   async ngOnInit() {
     this.loadModels(); // Ensure models are loaded on init

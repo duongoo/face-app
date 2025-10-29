@@ -46,4 +46,83 @@
     {{ checkInResult }}
   </div>
 }
+
+  <section class="registration-section">
+    <h3>Đăng ký khách hàng</h3>
+    <p class="registration-description">
+      Đăng ký khuôn mặt cho khách hàng mới để sử dụng tính năng check-in.
+    </p>
+
+    <form class="registration-form" (submit)="handleRegistrationSubmit($event)" novalidate>
+      <div class="form-group">
+        <label for="registrationName">Họ và tên</label>
+        <input
+          id="registrationName"
+          type="text"
+          name="registrationName"
+          [(ngModel)]="registrationName"
+          placeholder="Nguyễn Văn A"
+          [disabled]="registrationLoading"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="registrationCode">Mã khách hàng</label>
+        <input
+          id="registrationCode"
+          type="text"
+          name="registrationCode"
+          [(ngModel)]="registrationCode"
+          placeholder="KH001"
+          [disabled]="registrationLoading"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="form-group">
+        <label>Ảnh khuôn mặt</label>
+        <div class="file-selector" [class.disabled]="registrationLoading">
+          <button
+            type="button"
+            class="outline"
+            (click)="triggerRegistrationFilePicker()"
+            [disabled]="registrationLoading"
+          >
+            Chọn ảnh
+          </button>
+          <span class="file-name" [class.placeholder]="!registrationFile">
+            {{ registrationFile?.name || 'Chưa chọn file' }}
+          </span>
+          @if (registrationFile) {
+            <button
+              type="button"
+              class="link"
+              (click)="clearRegistrationFile()"
+              [disabled]="registrationLoading"
+            >
+              Xóa
+            </button>
+          }
+        </div>
+        <input
+          type="file"
+          #registrationFileInput
+          accept="image/*"
+          (change)="onRegistrationFileSelected($event)"
+          hidden
+        >
+      </div>
+
+      <button type="submit" [disabled]="isRegistrationDisabled">
+        {{ registrationLoading ? 'Đang đăng ký...' : 'Đăng ký khách hàng' }}
+      </button>
+    </form>
+
+    @if (registrationResult) {
+      <div class="registration-result" [ngClass]="registrationStatus">
+        {{ registrationResult }}
+      </div>
+    }
+  </section>
 </div>
